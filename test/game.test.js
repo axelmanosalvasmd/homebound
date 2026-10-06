@@ -1,0 +1,31 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import * as game from '../game.js';
+test('mission runs outbound, requires a stable bombing run, then returns and lands',()=>{
+ const g=game.createGame();game.join(g,'a','Pilot');
+ assert.equal(game.act(g,'a',{type:'start'}),true);
+ assert.equal(g.phase,'outbound');
+ assert.equal(game.act(g,'a',{type:'drop'}),false);
+ g.players.a.z=-6;game.act(g,'a',{type:'station',station:'navigator'});
+ g.distance=0.4;g.phase='attack';g.heading=g.targetHeading;g.bank=0;g.altitude=3000;
+ for(let i=0;i<15;i++)game.tick(g,1,()=>0.99);
+ assert.ok(g.lock>=10);
+ assert.equal(game.act(g,'a',{type:'drop'}),true);
+ assert.ok(g.bombScore>50);assert.equal(g.phase,'return');
+ g.distance=0;g.altitude=220;g.throttle=0.35;g.bank=0;
+ game.act(g,'a',{type:'exit'});g.players.a.z=-10;game.act(g,'a',{type:'station',station:'pilot'});
+ assert.equal(game.act(g,'a',{type:'land'}),true);
+ assert.equal(g.phase,'debrief');assert.equal(g.outcome,'LANDED');
+});
+test('crew joins with a four-person cap and exclusive nearby stations',()=>{
+ assert.equal(typeof game.createGame,'function');
+ const g=game.createGame();
+ for(let i=0;i<4;i++) assert.ok(game.join(g,'p'+i,'Crew '+i));
+ assert.equal(game.join(g,'p4','Fifth'),false);
+ g.players.p0.z=-10;g.players.p1.z=-10;
+ assert.equal(game.act(g,'p0',{type:'station',station:'pilot'}),true);
+ assert.equal(game.act(g,'p1',{type:'station',station:'pilot'}),false);
+ assert.equal(game.act(g,'p2',{type:'station',station:'engineer'}),false);
+ game.leave(g,'p0');
+ assert.equal(game.act(g,'p1',{type:'station',station:'pilot'}),true);
+});
