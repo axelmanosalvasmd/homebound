@@ -4,6 +4,10 @@ A playable greybox MVP of a first-person, cooperative WWII-inspired bomber crew 
 
 ## Run
 
+On Windows, double-click `start.cmd`. It installs dependencies on first run, starts the server on this PC's Tailscale address (or locally if Tailscale is off) and opens the game in your browser.
+
+Elsewhere:
+
 Requires Node 22+.
 
 ```sh
