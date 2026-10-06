@@ -10,3 +10,6 @@
 body[data-station=bombardier] #sight{display:block;background:radial-gradient(circle at center,transparent 0 31vmin,#050807 31.5vmin)}
 #sight i,#sight b{position:absolute;left:50%;top:50%;background:#f0d67ecc}#sight i{width:62vmin;height:1px;transform:translate(-50%,-50%)}#sight b{width:1px;height:62vmin;transform:translate(-50%,-50%)}
 body[data-station=bombardier] #crosshair,body[data-station=bombardier] #radio{display:none}
+#hurt{position:fixed;inset:0;pointer-events:none;opacity:0;background:radial-gradient(ellipse at center,transparent 40%,#8a1a0c 120%)}
+header{background:linear-gradient(#0b1214fa,#0b1214e0)}.mission{background:#0b1214;border:1px solid var(--brass);padding:6px 24px 8px;min-width:360px;gap:2px}.mission::before{content:'OBJECTIVE';font:10px 'IBM Plex Mono',monospace;letter-spacing:.2em;color:var(--brass)}.mission b{font-size:22px;font-weight:700;color:#fff6dc}.mission small{font-size:14px;color:var(--ink)}
+@media(max-width:900px){.mission{display:flex;min-width:0;padding:4px 10px}.mission b{font-size:16px}.mission small{font-size:11px}}

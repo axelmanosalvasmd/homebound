@@ -1,4 +1,4 @@
-import {test} from 'node:test';import assert from 'node:assert/strict';import {createGame,join,act,tick,HOTSPOTS,STATIONS,impactPoint} from '../game.js';import {MAP} from '../public/map.js';
+import {test} from 'node:test';import assert from 'node:assert/strict';import {createGame,join,act,tick,HOTSPOTS,STATIONS,impactPoint,GUN,aimAt} from '../game.js';import {MAP} from '../public/map.js';
 const calm=()=>.99;
 function setup(){const g=createGame();join(g,'a','Ace');act(g,'a',{type:'start'},calm);return g;}
 const at=(g,x,z)=>{g.players.a.x=x;g.players.a.z=z;};
@@ -19,11 +19,28 @@ test('pilot controls are clamped; bombardier only gets small corrections; moveme
 });
 test('guns only fire inside their arc and can shoot down a fighter',()=>{
  const g=setup();at(g,0,10);act(g,'a',{type:'station',station:'tail'});
- g.fighters.push({id:1,az:180,el:5,dist:600,hp:2,state:'approach',curve:0,passes:0,t:0});
+ g.fighters.push({id:1,az:180,el:5,dist:900,hp:2,maxHp:2,hits:0,state:'approach',curve:0,passes:0,t:0});
  assert.equal(act(g,'a',{type:'shoot',az:0,el:0}),false,'tail cannot fire forward');
- assert.equal(act(g,'a',{type:'shoot',az:180,el:5},()=>0),true);assert.equal(act(g,'a',{type:'shoot',az:180,el:5},()=>0),false,'cooldown');
- for(let i=0;i<4;i++){tick(g,.2,calm);const f=g.fighters[0];if(f)act(g,'a',{type:'shoot',az:f.az,el:f.el},()=>0);}assert.equal(g.kills,1);
+ assert.equal(act(g,'a',{type:'shoot',az:180,el:5},()=>.5),true);assert.equal(act(g,'a',{type:'shoot',az:180,el:5},()=>.5),false,'cooldown');
+ assert.equal(g.fighters[0].hits,0,'rounds take time to arrive');
+ // Rounds that meet the attacker bring it down.
+ for(let i=0;i<40&&!g.kills;i++){tick(g,.125,calm);const f=g.fighters[0];if(f&&f.state!=='down')act(g,'a',{type:'shoot',...aimAt('tail',f)},()=>.5);}
+ assert.equal(g.kills,1);
  const h=setup();h.electric=10;h.players.a.z=-4.7;act(h,'a',{type:'station',station:'top'});assert.equal(act(h,'a',{type:'shoot',az:90,el:30}),false,'powered turret dead without electrics');
+});
+test('a healthy fighter takes many hits and breaks off when badly damaged',()=>{
+ const g=setup();at(g,0,10);act(g,'a',{type:'station',station:'tail'});
+ g.fighters.push({id:1,az:180,el:5,dist:900,hp:12,maxHp:12,hits:0,state:'approach',curve:0,passes:0,t:0});
+ for(let i=0;i<40;i++){tick(g,.125,calm);const f=g.fighters[0];if(f?.state==='approach')act(g,'a',{type:'shoot',...aimAt('tail',f)},()=>.5);}
+ const f=g.fighters[0];assert.ok(f.hits>=8,'hits '+f.hits);assert.notEqual(f.state,'approach');
+});
+test('bullets are simulated: a crossing fighter is missed when aimed at directly and hit with lead',()=>{
+ const run=lead=>{const g=setup();at(g,.6,5.25);act(g,'a',{type:'station',station:'waistR'});
+  g.fighters.push({id:1,az:70,el:0,dist:1000,hp:99,maxHp:99,hits:0,state:'approach',curve:6,passes:0,t:0});
+  for(let i=0;i<24;i++){const f=g.fighters[0];act(g,'a',{type:'shoot',...(lead?aimAt('waistR',f):{az:f.az,el:f.el})},()=>.5);tick(g,.125,calm);}
+  for(let i=0;i<20;i++)tick(g,.125,calm);return g.fighters[0].hits;};
+ assert.equal(run(false),0,'aiming straight at a crossing target misses');
+ assert.ok(run(true)>=10,'leading the target hits');
 });
 test('bomb impact follows the predicted point; accuracy scores the strike',()=>{
  const g=setup();at(g,0,-10);act(g,'a',{type:'station',station:'bombardier'});
