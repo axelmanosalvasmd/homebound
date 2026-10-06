@@ -1,4 +1,5 @@
-import {MAP,overEnemy,overSea} from './public/map.js';
+import {MAP,overEnemy,overSea,aisle} from './public/map.js';
+export {aisle};
 // Crew positions inside the B-17G (metres; z runs nose -11.3 to tail +11.3). Guns carry their field of fire:
 // azimuth clockwise from the nose, elevation up from level, both in degrees.
 export const STATIONS={
@@ -21,8 +22,6 @@ export const HOTSPOTS={
 };
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const wrap=a=>((a%360)+360)%360;
-// Walkable half-width along the B-17 fuselage (metres): nose, crawlway under the flight deck, flight deck, bomb-bay catwalk, radio room + waist, tail crawlway.
-export const aisle=z=>z<-7.9?.6:z<-5.6?.25:z<-4.2?.75:z<-1?.1:z<7.5?.8:.3;
 // Bomb fall time from altitude (vacuum approximation) and the impact point the Norden sight predicts.
 export const fallTime=alt=>Math.sqrt(2*alt/9.81);
 export function groundVelocity(g){const h=g.heading*Math.PI/180;return {x:Math.sin(h)*g.airspeed+g.wind.x,y:Math.cos(h)*g.airspeed+g.wind.y};}

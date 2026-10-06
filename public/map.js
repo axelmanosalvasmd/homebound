@@ -41,6 +41,8 @@ export const MAP={
  roads:[[[52,-40],[60,-14],[66,-2],[72,4],[80,24],[85,34]],[[24.5,-5.5],[38,9],[53.5,12]],[[44,-6],[58,-3],[70,-9.5]],[[61,16],[73.5,9.6],[81,17]],[[-9,9],[3,-3],[8,-14]]],
  flak:[{name:'Hammfeld',x:72.5,y:10,r:5,strength:1},{name:'Essenburg',x:58,y:-3,r:6,strength:.9},{name:'Vlissing',x:24.5,y:-5.5,r:3,strength:.6},{name:'Lindenau',x:70.4,y:-8.6,r:3,strength:.5},{name:'Weselburg',x:53.5,y:12,r:2.2,strength:.4}],
 };
+// Walkable half-width along the B-17 fuselage (metres): nose, crawlway under the flight deck, flight deck, bomb-bay catwalk, radio room + waist, tail crawlway.
+export const aisle=z=>z<-7.9?.6:z<-5.6?.25:z<-4.2?.75:z<-1?.1:z<7.5?.8:.3;
 // Linear interpolation of a north-south coastline at latitude y.
 export function coastX(line,y){for(let i=0;i<line.length-1;i++){const [x0,y0]=line[i],[x1,y1]=line[i+1];if(y>=y0&&y<=y1)return x0+(x1-x0)*(y-y0)/(y1-y0);}return line[y<line[0][1]?0:line.length-1][0];}
 export const overEnemy=(x,y)=>x>coastX(MAP.enemyCoast,y);

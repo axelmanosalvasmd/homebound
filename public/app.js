@@ -1,5 +1,5 @@
 import * as THREE from '/three.js';
-import {MAP,drawChart,drawTerrain,chartToKm,kmToChart,scatter} from '/map.js';
+import {MAP,aisle,drawChart,drawTerrain,chartToKm,kmToChart,scatter} from '/map.js';
 const $=s=>document.querySelector(s);
 let ws,id,room,g,stations={},hotspots={},yaw=0,pitch=0,lastStation,modalPhase,noticeTimer;
 const keys=new Set(),avatars=new Map();
@@ -10,7 +10,7 @@ const HORIZON='#c3c8b8';
 const scene=new THREE.Scene();scene.fog=new THREE.FogExp2(HORIZON,.000045);
 const camera=new THREE.PerspectiveCamera(73,innerWidth/innerHeight,.05,120000);camera.rotation.order='YXZ';scene.add(camera);
 let renderer;try{renderer=new THREE.WebGLRenderer({canvas:$('#world'),antialias:true,logarithmicDepthBuffer:true});}catch(e){$('#lobbyError').textContent='This browser needs WebGL. Try Chrome or Firefox on a desktop.';throw e;}
-renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,1.6));renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.1;
+renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,1.25));renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.1;
 scene.add(new THREE.HemisphereLight(0xdfe8e4,0x3a3a2c,2));const sun=new THREE.DirectionalLight(0xffd6a0,2.8);sun.position.set(-80,100,-160);scene.add(sun);
 // The aircraft stays at the origin. The outside world rolls with bank (roll), turns with heading (yawGroup) and
 // slides under the aircraft by its map position and altitude (world). Map km (x east, y north) -> world (x*1000, alt, -y*1000).
@@ -85,8 +85,8 @@ cyl(.07,.1,.55,0,.28,-10.55,dark);box(.22,.2,.32,0,.66,-10.55,dark);cyl(.06,.06,
 box(.92,.05,.95,-.5,.75,-8.6,wood);box(.06,.75,.06,-.55,.37,-8.3,alu);box(.3,.35,.3,.55,.9,-8.8,dark);
 for(const s of [-1,1]){const g=cyl(.04,.05,1.1,s*.75,1,-8.7,dark);g.rotation.set(Math.PI/2,0,-s*.5);}
 // Flight deck: armoured seats, control columns, throttle pedestal, main panel with real gauge faces.
-box(1.9,1,.3,0,1.08,-7.45,dark);box(1.9,.08,.35,0,1.6,-7.4,bronze);
-for(const x of [-.45,.45]){box(.5,.12,.5,x,.75,-6.1,olive);box(.5,.7,.08,x,1.1,-5.85,armor);cyl(.04,.04,.55,x,.75,-6.8,dark);const yoke=new THREE.Mesh(new THREE.TorusGeometry(.17,.022,6,16,Math.PI*1.3),dark);yoke.position.set(x,1.05,-6.8);yoke.rotation.z=-Math.PI*.15;plane.add(yoke);}
+box(1.4,.72,.3,0,.96,-7.45,dark);box(1.5,.06,.32,0,1.34,-7.4,bronze);
+for(const x of [-.45,.45]){box(.5,.12,.5,x,.75,-6.1,olive);box(.5,.7,.08,x,1.1,-5.85,armor);cyl(.04,.04,.4,x,.66,-6.75,dark);const yoke=new THREE.Mesh(new THREE.TorusGeometry(.17,.022,6,16,Math.PI*1.3),dark);yoke.position.set(x,.88,-6.75);yoke.rotation.z=-Math.PI*.15;plane.add(yoke);}
 box(.22,.2,.5,0,.72,-6.95,dark);for(let i=0;i<4;i++)box(.025,.14,.025,-.06+i*.04,.88,-6.85,brass);
 // Top turret ring and twin .50s above the engineer.
 {const t=hull(-4.7);const ring=new THREE.Mesh(new THREE.TorusGeometry(.6,.04,6,24),dark);ring.rotation.x=Math.PI/2;ring.position.set(0,t.hi-.08,-4.7);plane.add(ring);box(.7,.06,.7,0,.68,-4.7,alu);for(const x of [-.12,.12]){const g=cyl(.035,.045,1.3,x,t.hi+.25,-5.3,dark);g.rotation.x=Math.PI/2;}}
@@ -121,7 +121,7 @@ for(const x of [-7.4,-3.6,3.6,7.4]){const nacelle=cyl(.62,.45,4.3,x,-.25,-4.1,dr
 const fireLight=new THREE.PointLight(0xff6325,0,8);fireLight.position.set(-.8,1.2,-3.2);plane.add(fireLight);
 for(const z of [-8.6,-6.2,-2.6,.6,4.2,6.6,9.4]){const h=hull(z);const l=new THREE.PointLight(0xffd59a,1.6,5,2);l.position.set(0,h.hi-.3,z);plane.add(l);cyl(.07,.09,.05,0,h.hi-.1,z,new THREE.MeshBasicMaterial({color:0xffdda2}));}
 // ---------- Live instruments ----------
-const cockpit=livePanel(1.86,.92,1024,0,1.08,-7.29,(ctx,w,h,s)=>{ctx.fillStyle='#1b2421';ctx.fillRect(0,0,w,h);
+const cockpit=livePanel(1.32,.65,1024,0,.97,-7.29,(ctx,w,h,s)=>{ctx.fillStyle='#1b2421';ctx.fillRect(0,0,w,h);
  for(let i=0;i<40;i++){ctx.fillStyle='#55503a';ctx.beginPath();ctx.arc(14+i*25.5,12,3,0,7);ctx.arc(14+i*25.5,h-12,3,0,7);ctx.fill();}
  const r=78,y1=110;dial(ctx,95,y1,r,'AIRSPEED',s.airspeed*3600,1000,{text:Math.round(s.airspeed*3600)+' km/h'});
  dial(ctx,265,y1,r,'ALTITUDE',s.altitude%1000,1000,{text:Math.round(s.altitude)+' m'});compass(ctx,435,y1,r,s.heading);
@@ -285,7 +285,7 @@ function renderUI(){if(!g||g.disconnected)return;const p=me();if(!p)return;
  $('#phase').textContent=g.phase.toUpperCase();
  const obj={briefing:['Assemble your crew','Up to four crew. Nine positions. Choose well.'],outbound:['Find the Hammfeld marshalling yard',`Chart on the navigator's table · forecast wind ${MAP.forecastWind.from}° ${MAP.forecastWind.kmh} km/h`],return:['Bring her home','Gear down over Ashby Green, below 400 m, throttle 50% or less'],debrief:['Mission debrief','Every return is a story.']}[g.phase];
  $('#objective').textContent=obj[0];$('#objectiveSub').textContent=obj[1];
- $('#radioLog').innerHTML=(g.log||[]).slice(0,5).map(l=>`<p><time>${String(Math.floor(l.t/60)).padStart(2,'0')}:${String(l.t%60).padStart(2,'0')}</time>${esc(l.text)}</p>`).join('');
+ const logHtml=(g.log||[]).slice(0,5).map(l=>`<p><time>${String(Math.floor(l.t/60)).padStart(2,'0')}:${String(l.t%60).padStart(2,'0')}</time>${esc(l.text)}</p>`).join('');if(logHtml!==$('#radioLog').dataset.html){$('#radioLog').dataset.html=logHtml;$('#radioLog').innerHTML=logHtml;}
  const s=p.station;
  if(s!==lastStation){lastStation=s;zoom=false;firing=false;if(s){const gun=stations[s].gun;yaw={waistL:Math.PI/2,waistR:-Math.PI/2,tail:Math.PI}[s]??0;pitch=s==='navigator'?-1:s==='ball'?-.5:s==='top'?.25:0;clampAim(s);}document.body.dataset.station=s||'';}
  nearestStation=null;activeHotspot=null;let best=1.2;
@@ -306,11 +306,12 @@ function renderModal(){const m=$('#missionModal');m.hidden=!['briefing','debrief
   m.innerHTML=`<div><span class="eyebrow">MISSION DEBRIEF / LUCKY STRIKE</span><h2>${esc(g.outcome)}</h2><p>${text}</p><div class="kpis"><div><b>${g.bombScore}%</b><small>TARGET DAMAGE</small></div><div><b>${g.kills}</b><small>FIGHTERS DOWN</small></div><div><b>${g.repairs}</b><small>REPAIRS</small></div><div><b>${Math.floor(g.time/60)}:${String(Math.floor(g.time%60)).padStart(2,'0')}</b><small>FLIGHT TIME</small></div></div><p>Aircraft condition: ${Math.max(0,Math.round(g.hull))}%.</p>${btn}</div>`;}
  $('#begin').onclick=()=>send({type:'start'});}
 // ---------- Frame ----------
-const heardShot=new Map();let previous=performance.now(),panelAt=0,flakAt=0,lastHull=100,shake=0;const camPos=new THREE.Vector3(),tmp=new THREE.Vector3(),UP=new THREE.Vector3(0,1,0);
+const heardShot=new Map(),walker={x:0,z:5};let frameAvg=.016,dprAt=0;let previous=performance.now(),panelAt=0,flakAt=0,lastHull=100,shake=0;const camPos=new THREE.Vector3(),tmp=new THREE.Vector3(),UP=new THREE.Vector3(0,1,0);
 function frame(now){requestAnimationFrame(frame);const dt=Math.min(.1,(now-previous)/1000);previous=now;const fly=flying()&&g.pos;
  // Smooth the 10 Hz server state: extrapolate along the ground track and ease toward the latest fix.
- if(fly){const age=(now-srvAt)/1000,h=g.heading*Math.PI/180,vx=Math.sin(h)*g.airspeed+g.wind.x,vy=Math.cos(h)*g.airspeed+g.wind.y,k=1-Math.exp(-dt*8);
-  view.x+=(g.pos.x+vx*age-view.x)*k;view.y+=(g.pos.y+vy*age-view.y)*k;view.alt+=(g.altitude+g.pitch*20*age-view.alt)*k;view.heading+=wrapPi((g.heading+g.bank*.16*age-view.heading)*Math.PI/180)*180/Math.PI*k;view.bank+=(g.bank-view.bank)*k;}
+ if(fly){const h=view.heading*Math.PI/180;view.x+=(Math.sin(h)*g.airspeed+g.wind.x)*dt;view.y+=(Math.cos(h)*g.airspeed+g.wind.y)*dt;view.alt+=g.pitch*20*dt;view.heading=(view.heading+view.bank*.16*dt+360)%360;view.bank+=(g.bank-view.bank)*(1-Math.exp(-dt*4));
+  const age=(now-srvAt)/1000,hs=g.heading*Math.PI/180,sx=g.pos.x+(Math.sin(hs)*g.airspeed+g.wind.x)*age,sy=g.pos.y+(Math.cos(hs)*g.airspeed+g.wind.y)*age,sa=g.altitude+g.pitch*20*age,sh=g.heading+g.bank*.16*age;
+  if(Math.hypot(sx-view.x,sy-view.y)>.3)Object.assign(view,{x:sx,y:sy,alt:sa,heading:sh});else{const c=1-Math.exp(-dt*1.5);view.x+=(sx-view.x)*c;view.y+=(sy-view.y)*c;view.alt+=(sa-view.alt)*c;view.heading+=wrapPi((sh-view.heading)*Math.PI/180)*180/Math.PI*c;}}
  yawGroup.rotation.y=view.heading*Math.PI/180;world.position.set(-view.x*KM,-view.alt,view.y*KM);roll.rotation.z=view.bank*Math.PI/180*.7;
  props.forEach((p,i)=>p.rotation.z+=dt*(g?.engines?(g.engines[i]>0?g.throttle*40:0):28));
  const p=me(),s=p?.station;
@@ -319,8 +320,11 @@ function frame(now){requestAnimationFrame(frame);const dt=Math.min(.1,(now-previ
   if(s==='bombardier'){// Norden sight: gyro-stabilised, looking at the predicted point of impact.
    const t=Math.sqrt(2*view.alt/9.81),h=g.heading*Math.PI/180,vx=Math.sin(h)*g.airspeed+g.wind.x,vy=Math.cos(h)*g.airspeed+g.wind.y,fwd=(vx*Math.sin(h)+vy*Math.cos(h))*t*KM,right=(vx*Math.cos(h)-vy*Math.sin(h))*t*KM;
    camera.position.set(0,.15,-10.95);tmp.set(right,-view.alt,-fwd);camera.lookAt(tmp.applyAxisAngle(new THREE.Vector3(0,0,1),view.bank*Math.PI/180*.7));fov=13;}
-  else{if(s&&GUN_CAM[s])camPos.set(...GUN_CAM[s]);else if(s==='pilot')camPos.set(-.45,1.62,-6.2);else if(s==='navigator')camPos.set(-.5,1.2,-8.15);else camPos.set(p.x,eyeY(p.z),p.z);
-   if(s)camera.position.copy(camPos);else camera.position.lerp(camPos,1-Math.exp(-dt*14));
+  else{if(s&&GUN_CAM[s])camPos.set(...GUN_CAM[s]);else if(s==='pilot')camPos.set(-.45,1.62,-6.2);else if(s==='navigator')camPos.set(-.5,1.2,-8.15);else{if(fly){const f=Number(keys.has('KeyW'))-Number(keys.has('KeyS')),side=Number(keys.has('KeyD'))-Number(keys.has('KeyA')),mx=-Math.sin(yaw)*f+Math.cos(yaw)*side,mz=-Math.cos(yaw)*f-Math.sin(yaw)*side,n=Math.max(1,Math.hypot(mx,mz));
+    walker.z=THREE.MathUtils.clamp(walker.z+mz/n*4*dt,-10.7,10.2);const w=aisle(walker.z);walker.x=THREE.MathUtils.clamp(walker.x+mx/n*4*dt,-w,w);
+    const err=Math.hypot(walker.x-p.x,walker.z-p.z);if(err>1.5||(!f&&!side)){const c=err>1.5?1:1-Math.exp(-dt*3);walker.x+=(p.x-walker.x)*c;walker.z+=(p.z-walker.z)*c;}}
+   camPos.set(walker.x,eyeY(walker.z),walker.z);}
+   if(s){camera.position.copy(camPos);walker.x=p.x;walker.z=p.z;}else{camera.position.x=camPos.x;camera.position.z=camPos.z;camera.position.y+=(camPos.y-camera.position.y)*(1-Math.exp(-dt*10));}
    camera.rotation.set(pitch,yaw,0);fov=s==='navigator'?(zoom?20:50):stations[s]?.gun?(zoom?32:62):73;}
   camera.fov=fov;
   if(shake>0){camera.position.x+=(Math.random()-.5)*shake*.06;camera.position.y+=(Math.random()-.5)*shake*.06;shake=Math.max(0,shake-dt*2);}
@@ -355,4 +359,5 @@ function frame(now){requestAnimationFrame(frame);const dt=Math.min(.1,(now-previ
  for(const f of flak){const u=f.userData;u.age+=dt;f.visible=u.age<5;if(!f.visible)continue;f.scale.setScalar((6+u.age*14)*u.scale);f.material.opacity=Math.max(0,.9-u.age*.18);f.material.emissiveIntensity=u.age<.15?3:0;}
  for(const b of blasts){const u=b.userData;if(!b.visible)continue;u.age+=dt;if(u.age<0){b.scale.setScalar(.01);continue;}b.scale.set(40+u.age*25,30+u.age*60,40+u.age*25);b.material.emissiveIntensity=Math.max(0,2-u.age*3);b.material.opacity=Math.max(0,1-u.age/14);b.visible=u.age<14;}
  camera.updateProjectionMatrix();renderer.render(scene,camera);
+ frameAvg=frameAvg*.95+dt*.05;if(now>dprAt){dprAt=now+2000;const cur=renderer.getPixelRatio(),max=Math.min(devicePixelRatio,1.5);const next=frameAvg>.021?Math.max(.75,cur-.25):frameAvg<.012?Math.min(max,cur+.25):cur;if(next!==cur)renderer.setPixelRatio(next);}
 }requestAnimationFrame(frame);
