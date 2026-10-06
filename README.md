@@ -4,6 +4,10 @@ A playable greybox MVP of a first-person, cooperative WWII-inspired bomber crew 
 
 ## Run
 
+On Windows, double-click `start.cmd`. It installs dependencies on first run, starts the server on this PC's Tailscale address (or locally if Tailscale is off) and opens the game in your browser.
+
+Elsewhere:
+
 Requires Node 22+.
 
 ```sh
@@ -17,55 +21,43 @@ Private preview: `http://100.122.62.101:8790` (device must be on the authorized 
 
 ## Play
 
-1. Create a crew or join a six-character crew code. Invite up to three friends. Host starts the sortie; late joins are supported.
-2. WASD walks; drag the scene to look; E uses/leaves a nearby station. Bottom shortcuts physically walk down the aisle to the selected station, then click Use.
-3. Pilot: bank to change heading, then level to hold course. Pitch changes altitude. Controls hold when pilot leaves, making solo station switching possible. No autonomous AI crew.
-4. Navigator: fly heading 090°, altitude strictly between 2500 and 3500 m, bank under 5°, and build 12 seconds of stable solution once in the attack phase. Release within the 65-second attack window.
-5. Engineer: prioritize fire, leaks, then engines/power/oxygen. Actions have a three-second cooldown. Hull cannot be repaired in flight. Engine patches cap at 85%.
-6. Gunner: fire bursts against fighter threats before impact. Aim is assisted, not an aiming simulation. Ammo is limited.
-7. Return: turn to 270°, descend, then land when distance ≤0.5 km, altitude ≤400 m, throttle ≤50%, bank <8°. Landing itself is a condition-gated action, not runway physics.
-8. Aborting can save the crew. Bailout ends the sortie for everyone. Fuel exhaustion or loss of all engines causes ditching. Structural failure loses the aircraft.
+Desktop with mouse and keyboard. Click the view to capture the mouse (Esc frees it). WASD walks the B-17G, E takes or leaves a crew position, holding E repairs damage you are standing at, and 1-4 send intercom calls. Use a voice call with your crew.
 
-Desktop recommended. Mobile layout and station-walk shortcuts are provided. Use external voice chat; built-in intercom is preset text calls. Engine sound is opt-in.
+The host starts the sortie airborne over Ashby Green in England. The target is the Hammfeld marshalling yard in Germany, across the Channel, the occupied Dutch coast and the Rhine. There is no map marker: navigation is part of the challenge.
 
-## Implemented
+- **Pilot (flight deck):** A/D bank, W/S nose down/up, Shift/Ctrl throttle, Space levels the wings, G gear, hold B to bail out. Read the live panel: airspeed, altimeter, compass, artificial horizon, fuel, climb, four engines with fire lamps, gear lamp. Controls hold when the pilot leaves.
+- **Navigator (nose table):** a period chart of the whole area, drawn from the same data as the terrain below. Click to pencil in a position fix, look at a destination and press C to call a course, distance and time over the intercom. The repeater shows compass, airspeed, altitude and clock. The forecast wind is 290° at 55 km/h; the real wind differs each sortie. Lindenau, 20 km south of Hammfeld, has a similar yard.
+- **Bombardier (Norden sight):** a stabilised view of where the bombs will land, wind drift included. A/D make small corrections through the autopilot; Space releases. Accuracy decides target damage.
+- **Gunners:** chin, top and ball turrets (powered, dead without electrics), left and right waist, tail. Each has its real field of fire. Mouse aims, hold the button to fire, right mouse zooms. Fighters attack from any clock position, high or low, and come round for a second pass.
+- **Damage:** engine fires (fire bottles behind the pilots), fuel leaks (bomb bay transfer valves), electrics (radio room junction box), oxygen (waist regulators), and cabin fires where they burn. Anyone can repair; walk there and hold E. Flak covers towns and the target.
+- **Landing:** gear down over the home field, below 400 m, throttle at 50% or less, wings nearly level.
 
-- Procedural 3D interior, cockpit, four stations, visible other crew members, countryside, clouds, engine propellers and an approaching fighter.
-- Server-authoritative 10 Hz simulation, four-player capped isolated rooms, station exclusivity, server-side walking speed, bounded controls, rate and payload limits, origin checks, dead-socket cleanup.
-- One airborne mission: outbound, attack, return, debrief; partial success and replay.
-- Fuel leaks, port-engine fires, electrical/oxygen damage, flak, fighters, limited repairs and ammo.
-- Multiple system consequences: fire damages engine/hull, leaks consume fuel, engine damage reduces speed, low electricity drifts bank. Oxygen affects displayed internal crew health at high altitude, but incapacitation is not implemented.
-- Font is optionally loaded from Google Fonts, with local fallbacks. Three.js is served locally from npm.
+Up to four crew, nine positions. A sortie takes roughly 10-15 minutes.
 
-## Deliberately not implemented
+## Not implemented
 
-Takeoff; realistic aerodynamics or collision physics; manual turret aiming; individual injuries/incapacitation; voice chat; navigation by landmarks; multiple missions; aircraft customization; persistent scars/upgrades; campaign progression; reconnect-seat recovery; public matchmaking; production authentication/abuse protection.
-
-Rooms are in memory and disappear when the last player leaves or the server restarts. Replay resets aircraft condition. No public GitHub repository or public tunnel was created.
+Takeoff; realistic aerodynamics or collisions; individual injuries; voice chat; multiple missions; campaign progression; reconnect-seat recovery; public matchmaking; production authentication. Touch devices are not supported since the station rework. Rooms are in memory and disappear when the last player leaves or the server restarts.
 
 ## Verification
 
 ```sh
 npm test
-npx playwright install chromium
+npx playwright install chromium-headless-shell
 # start npm start separately
 node browser-test.js
-# for private deployed preview:
-URL=http://100.122.62.101:8790 node browser-test.js
 ```
 
-Tests cover mission phases, roles and cooldowns, cap/isolation with real WebSockets, malformed station names, replay reset, and 20 seeded full sorties driven only by crew actions and simulation ticks. Browser tests use two independent clients, all four stations, bailout/replay, and a mobile viewport. Screenshots go to `artifacts/`.
-
-Testing note: the original live 2D canvas route map caused a compositor/screenshot hang in headless Chromium with SwiftShader. The final map uses SVG; the same browser interaction test then completed. Keep SVG for lightweight HUD maps so they do not require an additional canvas rendering context alongside Three.js.
+Tests cover station exclusivity and the walkable cabin, hand repairs, gun arcs and powered turrets, bomb-impact scoring, landing rules, chart marks, fighters attacking from several sides, real WebSockets, malformed input, and 20 seeded full sorties flown by a bot crew (wind-corrected navigation, a bombardier, one tail gunner, one repairer). The browser test drives two clients with the keyboard and screenshots to `artifacts/`. Headless Chromium renders on the CPU at a few frames per second, so its waits are long.
 
 ## Files
 
 - `game.js`: authoritative pure simulation
+- `public/map.js`: shared geography plus the chart and terrain painters
 - `server.js`: allowlisted assets, rooms and WebSocket transport
-- `public/app.js`: procedural scene, controls and HUD
+- `public/app.js`: B-17G interior, terrain, fighters, first-person stations and HUD
 - `test/`: unit/integration/sortie tests
 - `browser-test.js`: Playwright interaction checks
-- `DESIGN.md`: MVP boundaries and visual language
+- `DESIGN.md`: design decisions and visual language
 
 ## The question this MVP answers
 

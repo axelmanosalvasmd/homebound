@@ -1,6 +1,6 @@
-import http from 'node:http';import {readFile} from 'node:fs/promises';import {randomBytes,randomUUID} from 'node:crypto';import {WebSocketServer,WebSocket} from 'ws';import {createGame,join,leave,act,tick,STATIONS} from './game.js';
+import http from 'node:http';import {readFile} from 'node:fs/promises';import {randomBytes,randomUUID} from 'node:crypto';import {WebSocketServer,WebSocket} from 'ws';import {createGame,join,leave,act,tick,STATIONS,HOTSPOTS} from './game.js';
 const rooms=new Map(),clients=new Map();
-const assets={'/':['public/index.html','text/html'],'/app.js':['public/app.js','text/javascript'],'/style.css':['public/style.css','text/css'],'/three.js':['node_modules/three/build/three.module.js','text/javascript'],'/three.core.js':['node_modules/three/build/three.core.js','text/javascript']};
+const assets={'/':['public/index.html','text/html'],'/app.js':['public/app.js','text/javascript'],'/style.css':['public/style.css','text/css'],'/map.js':['public/map.js','text/javascript'],'/three.js':['node_modules/three/build/three.module.js','text/javascript'],'/three.core.js':['node_modules/three/build/three.core.js','text/javascript']};
 const server=http.createServer(async(req,res)=>{
  const path=new URL(req.url,'http://local').pathname;
  res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Referrer-Policy','no-referrer');
@@ -24,10 +24,10 @@ wss.on('connection',(ws,req)=>{
  if(!code){if(rooms.size>=40){send(ws,{type:'error',message:'All hangars occupied.'});ws.close();return;}do{code=randomBytes(3).toString('hex').toUpperCase();}while(rooms.has(code));g=createGame();rooms.set(code,g);}
  else{g=rooms.get(code);if(!g){send(ws,{type:'error',message:'Room not found. Ask your crew for a new invite.'});ws.close();return;}}
  const id=randomUUID();if(!join(g,id,a.name)){send(ws,{type:'error',message:'Crew full. Four seats only.'});ws.close();return;}
- clearTimeout(joinTimer);clients.set(ws,{code,id});send(ws,{type:'welcome',room:code,id,stations:STATIONS});send(ws,{type:'state',game:g});return;
+ clearTimeout(joinTimer);clients.set(ws,{code,id});send(ws,{type:'welcome',room:code,id,stations:STATIONS,hotspots:HOTSPOTS});send(ws,{type:'state',game:g});return;
  }
  const c=clients.get(ws);if(!c)return;const g=rooms.get(c.code);if(!g)return;
- if(!act(g,c.id,a)&&!['move','control','shoot'].includes(a.type))send(ws,{type:'notice',message:'Action unavailable. Check station, distance, or mission conditions.'});
+ if(!act(g,c.id,a)&&!['move','control','shoot','repair','mark'].includes(a.type))send(ws,{type:'notice',message:'Action unavailable. Check station, distance, or mission conditions.'});
  });
  ws.on('close',()=>{clearTimeout(joinTimer);const c=clients.get(ws);if(c){const g=rooms.get(c.code);if(g){leave(g,c.id);if(!Object.keys(g.players).length)rooms.delete(c.code);}clients.delete(ws);}});
  ws.on('error',()=>{});
