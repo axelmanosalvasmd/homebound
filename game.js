@@ -8,7 +8,7 @@ export const STATIONS={
  navigator:{x:-.45,z:-8.6,name:'Navigator\'s table'},
  pilot:{x:-.45,z:-6.3,name:'Pilot\'s seat'},
  top:{x:0,z:-4.7,name:'Top turret',gun:{az:null,el:[3,85],powered:true,at:[0,2.75,-5.3],barrels:2}},
- ball:{x:0,z:2.7,name:'Ball turret',gun:{az:null,el:[-85,-3],powered:true,at:[0,-.85,3.2],barrels:2}},
+ ball:{x:0,z:2.7,name:'Ball turret',gun:{az:null,el:[-85,-3],powered:true,at:[0,-.95,2.7],barrels:2}},
  waistL:{x:-.6,z:4.05,name:'Left waist gun',gun:{az:[200,340],el:[-45,50],at:[-1.6,1.6,4.05],barrels:1}},
  waistR:{x:.6,z:5.25,name:'Right waist gun',gun:{az:[20,160],el:[-45,50],at:[1.6,1.6,5.25],barrels:1}},
  tail:{x:0,z:10,name:'Tail guns',gun:{az:[140,220],el:[-40,35],at:[0,.75,12],barrels:2}},

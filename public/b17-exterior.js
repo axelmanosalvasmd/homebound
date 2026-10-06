@@ -517,16 +517,8 @@ export function buildExterior(a, b) {
     S.push([xf(new THREE.BoxGeometry(.38, .14, .3), [0, top + .32, z - .48]), '#24261f']);
     twin(V(0, top + .32, z - .5), V(0, 0, -1), .12, 1.2);
   }
-  // Sperry ball turret, guns stowed aft.
-  {
-    const c = V(0, -.27, 2.7);
-    S.push([xf(new THREE.SphereGeometry(.62, 24, 16), [c.x, c.y, c.z]), '#3b3f35']);
-    S.push([xf(new THREE.TorusGeometry(.63, .025, 4, 28), [c.x, c.y, c.z], [0, Math.PI / 2, 0]), '#24261f']);
-    GL.push([xf(new THREE.SphereGeometry(.635, 16, 5, 0, TAU, 0, .42), [c.x, c.y - .05, c.z], [Math.PI / 2, 0, 0]), '#fff']);
-    S.push([xf(new THREE.TorusGeometry(.26, .02, 4, 20), [c.x, c.y - .05, c.z + .58]), FRAME]);
-    S.push([xf(new THREE.CylinderGeometry(.72, .7, .12, 28, 1, true), [0, hull(2.7).lo + .02, 2.7]), (n, p) => camo(n, p)]);
-    twin(V(0, c.y - .02, c.z + .45), V(0, 0, 1), .13, 1.15);
-  }
+  // Sperry ball turret mounting ring. The ball itself rotates with its gunner, so the game builds it (public/app.js).
+  S.push([xf(new THREE.CylinderGeometry(.72, .7, .12, 28, 1, true), [0, hull(2.7).lo - .05, 2.7]), (n, p) => camo(n, p)]);
   // Cheyenne tail turret: glazed cap, armoured gun mount, twin guns aft.
   {
     const h = hull(TAIL), T = [[0, 1], [.15, .99], [.3, .95], [.42, .86], [.5, .72], [.56, .5], [.6, .15], [.61, 0]];
