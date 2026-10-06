@@ -1,4 +1,6 @@
 import * as THREE from '/three.js';
+import {buildExterior,paintSkin} from '/b17-exterior.js';
+import {makeCrewman,disposeCrewman} from '/crew.js';
 import {MAP,aisle,drawChart,drawTerrain,chartToKm,kmToChart,scatter} from '/map.js';
 const $=s=>document.querySelector(s);
 let ws,id,room,g,stations={},hotspots={},yaw=0,pitch=0,lastStation,modalPhase,noticeTimer;
@@ -58,13 +60,12 @@ function panels(base,line,front,belly){return tex(1024,2048,(ctx,w,h)=>{ctx.fill
 function hullGeometry(grow){const geo=new THREE.CylinderGeometry(1,1,TAIL-NOSE,64,90,true);geo.rotateX(-Math.PI/2);geo.translate(0,0,(NOSE+TAIL)/2);const p=geo.attributes.position;
  for(let i=0;i<p.count;i++){const h=hull(p.getZ(i));p.setXY(i,p.getX(i)*h.rx*grow,h.cy+p.getY(i)*h.ry*grow);}geo.computeVertexNormals();return geo;}
 function skin(grow,map,side){plane.add(new THREE.Mesh(hullGeometry(grow),new THREE.MeshStandardMaterial({map,side,alphaMap:windowMask,alphaTest:.5,roughness:side===THREE.BackSide?.55:.85,metalness:side===THREE.BackSide?.45:.15})));}
-skin(1,panels('#a3a7a0','#5d625c','#4b5642'),THREE.BackSide);skin(1.025,panels('#4d5136','#2b2e20',null,'#7d827d'),THREE.FrontSide);
+skin(1,panels('#a3a7a0','#5d625c','#4b5642'),THREE.BackSide);skin(1.025,tex(1024,2048,paintSkin),THREE.FrontSide);
 const glass=new THREE.MeshStandardMaterial({color:'#b9d0d4',transparent:true,opacity:.16,roughness:.05,metalness:.1,depthWrite:false});
 // Framed plexiglass caps: nose cone, tail gunner's window, top turret.
 function dome(x,y,z,sx,sy,sz,rx,meridians=8,rings=[.55,1.05]){const g=new THREE.Group();g.position.set(x,y,z);g.scale.set(sx,sy,sz);g.rotation.x=rx;plane.add(g);
  g.add(new THREE.Mesh(new THREE.SphereGeometry(1,24,12,0,Math.PI*2,0,Math.PI/2),glass));const frame=pts=>g.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts),24,.012,4),rim));const at=(th,ph)=>new THREE.Vector3(Math.sin(ph)*Math.cos(th),Math.cos(ph),Math.sin(ph)*Math.sin(th));
  for(let i=0;i<meridians;i++)frame([...Array(13)].map((_,k)=>at(i*Math.PI*2/meridians,k/12*Math.PI/2)));for(const ph of rings)frame([...Array(33)].map((_,k)=>at(k/32*Math.PI*2,ph)));return g;}
-{const n=hull(NOSE),t=hull(TAIL);dome(0,n.cy,NOSE,n.rx,n.ry,2,-Math.PI/2,8,[.7,1.2]);dome(0,t.cy,TAIL,t.rx,t.ry,.5,Math.PI/2,4,[.9]);const tt=hull(-4.7);dome(0,tt.hi-.05,-4.7,.62,.55,.62,0,6,[.9]);}
 // Ribs every 0.6 m, longitudinal stringers.
 for(let z=NOSE+.4;z<TAIL-.2;z+=.6){if(z>COCKPIT[0]&&z<COCKPIT[1])continue;const h=hull(z);plane.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(new THREE.EllipseCurve(0,h.cy,h.rx-.03,h.ry-.03).getPoints(40).map(p=>new THREE.Vector3(p.x,p.y,z)),true),40,.022,4,true),rim));}
 for(const a of [.5,1,1.45,1.95])for(const s of [-1,1])for(const [z0,z1] of [[NOSE+.2,COCKPIT[0]],[COCKPIT[1],TAIL-.1]]){const pts=[];for(let z=z0;z<=z1+.01;z+=Math.min(.5,(z1-z0)/2)){const h=hull(z);pts.push(new THREE.Vector3(s*(h.rx-.04)*Math.sin(a),h.cy+(h.ry-.04)*Math.cos(a),z));}plane.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts),24,.018,4),rim));}
@@ -89,7 +90,7 @@ box(1.4,.72,.3,0,.96,-7.45,dark);box(1.5,.06,.32,0,1.34,-7.4,bronze);
 for(const x of [-.45,.45]){box(.5,.12,.5,x,.75,-6.1,olive);box(.5,.7,.08,x,1.1,-5.85,armor);cyl(.04,.04,.4,x,.66,-6.75,dark);const yoke=new THREE.Mesh(new THREE.TorusGeometry(.17,.022,6,16,Math.PI*1.3),dark);yoke.position.set(x,.88,-6.75);yoke.rotation.z=-Math.PI*.15;plane.add(yoke);}
 box(.22,.2,.5,0,.72,-6.95,dark);for(let i=0;i<4;i++)box(.025,.14,.025,-.06+i*.04,.88,-6.85,brass);
 // Top turret ring and twin .50s above the engineer.
-{const t=hull(-4.7);const ring=new THREE.Mesh(new THREE.TorusGeometry(.6,.04,6,24),dark);ring.rotation.x=Math.PI/2;ring.position.set(0,t.hi-.08,-4.7);plane.add(ring);box(.7,.06,.7,0,.68,-4.7,alu);for(const x of [-.12,.12]){const g=cyl(.035,.045,1.3,x,t.hi+.25,-5.3,dark);g.rotation.x=Math.PI/2;}}
+{const t=hull(-4.7);const ring=new THREE.Mesh(new THREE.TorusGeometry(.6,.04,6,24),dark);ring.rotation.x=Math.PI/2;ring.position.set(0,t.hi-.08,-4.7);plane.add(ring);box(.7,.06,.7,0,.68,-4.7,alu);}
 // Bomb bay: V-frames and vertical racks holding twelve 500 lb bombs. They disappear once released.
 const bombs=new THREE.Group();plane.add(bombs);const bombMat=mat('#4c5236',.2,.6),band=mat('#c9a43a',.2,.6);
 for(const s of [-1,1]){for(const z of [-4,-3.2,-2.4,-1.6])box(.05,1.9,.06,s*.32,1,z,alu);for(const y of [.3,.85,1.4,1.9])box(.04,.04,2.5,s*.32,y,-2.8,alu);for(const z of [-3.6,-1.6])box(.05,1.8,.05,s*.62,.95,z,alu);
@@ -101,23 +102,45 @@ for(let i=0;i<5;i++)cyl(.025,.025,.02,-.6,1.2+(i%2)*.15,.25+i*.08,brass).rotatio
 // Ball turret: the top of the Sperry ball protrudes through the floor, hung from its yoke.
 {const ball=new THREE.Mesh(new THREE.SphereGeometry(.62,20,14),mat('#3a3f37',.5,.45));ball.position.set(0,-.27,2.7);plane.add(ball);const yoke=new THREE.Mesh(new THREE.TorusGeometry(.72,.05,6,20,Math.PI),alu);yoke.position.set(0,.05,2.7);plane.add(yoke);for(const x of [-.72,.72])box(.08,1.95,.12,x,1,2.7,alu);}
 // Waist: .50 cal guns on pintle mounts at the staggered windows, ammunition boxes, oxygen bottles.
-for(const [s,z] of [[-1,4.05],[1,5.25]]){const h=hull(z);const x=s*(h.rx-.12);box(.08,.5,.08,x,1.3,z,dark);const g=cyl(.04,.055,1.6,x-s*.05,1.6,z,dark);g.rotation.z=s*Math.PI/2;box(.2,.25,.35,x-s*.35,1.45,z,olive);box(.3,.35,.4,x-s*.15,.3,z-.6,olive);}
+const waistGuns={};for(const [s,z] of [[-1,4.05],[1,5.25]]){const h=hull(z);const x=s*(h.rx-.12);box(.08,.5,.08,x,1.3,z,dark);const g=cyl(.04,.055,1.6,x-s*.05,1.6,z,dark);waistGuns[s<0?'waistL':'waistR']=g;g.rotation.z=s*Math.PI/2;box(.2,.25,.35,x-s*.35,1.45,z,olive);box(.3,.35,.4,x-s*.15,.3,z-.6,olive);}
 for(const z of [6.4,6.8])for(const s of [-1,1]){const h=hull(z);cyl(.11,.11,.55,s*(h.rx-.18),1,z,mat('#c6a83e',.3,.5));}
 // Tail: wheel-well hump, kneeling pads, armour plate, twin guns out through the glazing.
 box(.6,.3,1,0,.32,8.2,alu);box(.5,.12,.35,0,.5,10.35,olive);for(const x of [-.18,.18])box(.18,.08,.35,x,.38,9.95,olive);box(.7,.35,.05,0,.72,10.75,armor);
 for(const x of [-.14,.14]){const g=cyl(.035,.045,1.2,x,1.05,11.3,dark);g.rotation.x=Math.PI/2;}
-// Exterior: low wing (31.6 m span), four Wright Cyclone nacelles, chin, ball and tail guns, B-17 fin and tailplane.
-function planform(span,rootLead,rootTrail,tipLead,tipTrail,thick,y,z){const s=new THREE.Shape([new THREE.Vector2(-span,tipLead),new THREE.Vector2(0,rootLead),new THREE.Vector2(span,tipLead),new THREE.Vector2(span,tipTrail),new THREE.Vector2(0,rootTrail),new THREE.Vector2(-span,tipTrail)]);
- const o=new THREE.Mesh(new THREE.ExtrudeGeometry(s,{depth:thick,bevelEnabled:true,bevelThickness:thick/2,bevelSize:.1,bevelSegments:1}),drab);o.rotation.x=Math.PI/2;o.position.set(0,y,z);plane.add(o);return o;}
-planform(15.8,-4.9,1.1,-2.4,-.3,.22,-.42,0);planform(5.4,8.9,11.3,9.9,10.9,.08,1.2,0);
-{const fin=new THREE.Mesh(new THREE.ExtrudeGeometry(new THREE.Shape([new THREE.Vector2(3.5,2.12),new THREE.Vector2(8.6,3.4),new THREE.Vector2(9.7,5.2),new THREE.Vector2(10.6,5.4),new THREE.Vector2(11.1,4.9),new THREE.Vector2(11.5,1.5),new THREE.Vector2(10,1.68),new THREE.Vector2(7.5,2),new THREE.Vector2(5,2.1)]),{depth:.14,bevelEnabled:false}),drab);fin.rotation.y=-Math.PI/2;fin.position.x=-.07;plane.add(fin);}
-const props=[];const propMat=mat('#121614',.3,.5),tipMat=mat('#c9a43a',.2,.6);
-for(const x of [-7.4,-3.6,3.6,7.4]){const nacelle=cyl(.62,.45,4.3,x,-.25,-4.1,drab);nacelle.rotation.x=Math.PI/2;const cowl=cyl(.72,.66,.7,x,-.25,-6.2,drab);cowl.rotation.x=Math.PI/2;
- const p=new THREE.Group();p.position.set(x,-.25,-6.65);plane.add(p);const spinner=new THREE.Mesh(new THREE.ConeGeometry(.22,.4,12),propMat);spinner.rotation.x=-Math.PI/2;spinner.position.z=-.12;p.add(spinner);
- for(let i=0;i<3;i++){const arm=new THREE.Group();arm.rotation.z=i*Math.PI*2/3;p.add(arm);const blade=box(.24,1.7,.05,0,.9,0,propMat,arm);blade.rotation.y=.35;box(.24,.16,.06,0,1.7,0,tipMat,arm);}
- props.push(p);}
-{const chin=new THREE.Mesh(new THREE.SphereGeometry(.42,16,10),mat('#3a3f37',.5,.45));chin.position.set(0,-.35,-10.2);plane.add(chin);for(const x of [-.12,.12]){const g=cyl(.035,.045,1,x,-.4,-10.8,dark);g.rotation.x=Math.PI/2;}
- for(const z of [2.7])for(const x of [-.12,.12]){const g=cyl(.035,.045,1,x,-.55,z+.6,dark);g.rotation.x=Math.PI/2;}}
+// ---------- Interior detail: the clutter that makes it a working aircraft ----------
+{const tube=(pts,r,m)=>plane.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts.map(p=>new THREE.Vector3(...p))),Math.max(8,pts.length*6),r,6),m));
+ const hose=mat('#2b2f2a',.1,.6),cable=mat('#1c1f1d',.1,.7),khaki=mat('#8a7d5a',0,.9),webbing=mat('#9a8a62',0,.95),red=mat('#8e2a1e',.3,.5),yellowGreen=mat('#8f9a3e',.2,.6),white=mat('#d8d4c4',0,.8),leather=mat('#4a3424',.1,.8),cushion=mat('#3b3328',0,.95);
+ // Plywood floor planks with scuffs and grip strips, replacing the flat wood.
+ const planks=tex(256,1024,(ctx,w,h)=>{for(let y=0;y<h;y+=64){ctx.fillStyle=`hsl(32,${28+rand()*10}%,${30+rand()*8}%)`;ctx.fillRect(0,y,w,64);ctx.fillStyle='#1d140c';ctx.fillRect(0,y,w,2);for(let k=0;k<30;k++){ctx.fillStyle=`rgba(0,0,0,${rand()*.12})`;ctx.fillRect(rand()*w,y+rand()*64,2+rand()*40,1+rand()*2);}}for(const x of [.2,.8]){ctx.fillStyle='rgba(30,30,28,.55)';ctx.fillRect(x*w-10,0,20,h);}});planks.wrapS=planks.wrapT=THREE.RepeatWrapping;planks.repeat.set(1,4);wood.map=planks;wood.color.set('#ffffff');wood.needsUpdate=true;
+ // Wiring looms along the upper stringers, with clips at each rib.
+ for(const s of [-1,1]){const pts=[];for(let z=-7.6;z<=9.5;z+=.6){const h=hull(z);pts.push([s*(h.rx-.12)*Math.sin(.75),h.cy+(h.ry-.12)*Math.cos(.75),z]);}tube(pts,.025,cable);tube(pts.map(([x,y,z])=>[x*.97,y-.05,z]),.015,cable);}
+ // Oxygen lines run low along the starboard wall to a regulator at each crew position.
+ {const pts=[];for(let z=-9;z<=10.2;z+=.6){const h=hull(z);pts.push([(h.rx-.1)*Math.sin(2.05),h.cy+(h.ry-.1)*Math.cos(2.05),z]);}tube(pts,.02,yellowGreen);
+  for(const [x,y,z] of [[.55,.95,-9.4],[-.85,1.2,-8.2],[-.95,1.25,-6.1],[.95,1.25,-6.1],[.95,1.4,-4.9],[-1,1.3,.2],[-1.05,1.25,4.6],[1.05,1.25,5.8],[.45,.95,9.9]]){box(.06,.16,.12,x,y,z,yellowGreen);const sx=Math.sign(x)||1;tube([[x,y-.08,z],[x-sx*.08,y-.35,z+.05],[x-sx*.18,y-.5,z+.12]],.012,hose);}}
+ // Ammunition: boxes on the floor with flexible feed chutes curving up to each waist gun and the tail guns.
+ for(const [s,z] of [[-1,4.05],[1,5.25]]){const h=hull(z),gx=s*(h.rx-.12);box(.3,.38,.42,gx-s*.25,.29,z+.55,olive);tube([[gx-s*.25,.48,z+.5],[gx-s*.3,.85,z+.35],[gx-s*.22,1.25,z+.12],[gx-s*.1,1.5,z]],.045,cable);}
+ for(const x of [-.32,.32]){box(.25,.3,.35,x,.55,9.3,olive);tube([[x,.7,9.35],[x*.8,.9,9.9],[x*.5,1,10.5],[x*.42,1.03,10.9]],.035,cable);}
+ // Parachute chest packs and first-aid kits clipped to the walls; fire extinguishers at the nose, flight deck and waist.
+ for(const [x,y,z] of [[-.95,1.1,-1.6],[.95,1.1,-1.6],[-1.05,1.6,2.2],[1.05,1.6,3],[-.95,1.5,7]]){const p=box(.12,.32,.42,x,y,z,khaki);box(.13,.05,.43,x,y+.08,z,webbing);box(.13,.05,.43,x,y-.08,z,webbing);}
+ for(const [x,y,z] of [[.9,1.5,-2],[-1.05,1.75,5.2]]){box(.08,.22,.3,x,y,z,white);box(.09,.14,.04,x,y,z,red);box(.09,.04,.14,x,y,z,red);}
+ for(const [x,y,z] of [[.6,.5,-8.9],[-.85,.85,-5],[1.02,.6,6.2]]){cyl(.07,.07,.42,x,y,z,red);cyl(.03,.03,.1,x,y+.26,z,rim);}
+ // Flight deck: cushioned seats with lap belts and shoulder straps, rudder pedals, throttle levers with knobs, overhead switch panel.
+ for(const x of [-.45,.45]){box(.46,.08,.44,x,.84,-6.1,cushion);box(.46,.5,.07,x,1.15,-5.82,cushion);for(const dx of [-.12,.12]){box(.04,.55,.02,x+dx,1.1,-5.86,webbing);}box(.44,.04,.03,x,.9,-6.3,webbing);
+  for(const dx of [-.12,.12]){box(.1,.03,.2,x+dx,.55,-7.05,dark);box(.02,.15,.02,x+dx,.48,-7.1,rim);}}
+ for(let i=0;i<4;i++){const l=box(.02,.16,.02,-.06+i*.04,.9,-6.9,rim);l.rotation.x=-.4;const k=new THREE.Mesh(new THREE.SphereGeometry(.022,8,6),red);k.position.set(-.06+i*.04,.97,-6.93);plane.add(k);}
+ {const t=hull(-6.6);box(.6,.04,.35,0,t.hi-.12,-6.2,dark);for(let i=0;i<8;i++)box(.02,.02,.05,-.21+i*.06,t.hi-.15,-6.12,brass);}
+ // Navigator: stool, a drift meter and astrocompass on the table, a pencil and dividers on the chart.
+ cyl(.16,.18,.05,-.45,.48,-8.15,cushion);cyl(.03,.03,.46,-.45,.23,-8.15,rim);cyl(.06,.08,.12,-.85,.84,-8.95,dark);box(.18,.006,.006,-.35,.79,-8.45,mat('#c9a43a'));
+ // Radio room: set faces with dials, a desk lamp, the operator's padded chair.
+ const radioFace=tex(256,128,(ctx,w,h)=>{ctx.fillStyle='#2b302c';ctx.fillRect(0,0,w,h);for(let i=0;i<4;i++){ctx.beginPath();ctx.arc(32+i*62,52,20,0,7);ctx.fillStyle='#0d0f0e';ctx.fill();ctx.strokeStyle='#bfb79a';ctx.lineWidth=2;ctx.stroke();ctx.beginPath();ctx.moveTo(32+i*62,52);ctx.lineTo(32+i*62+Math.cos(i)*16,52+Math.sin(i)*16);ctx.stroke();}ctx.fillStyle='#c9c3a6';ctx.font='bold 13px monospace';ctx.fillText('BC-348  RECEIVER',60,110);for(let i=0;i<6;i++){ctx.beginPath();ctx.arc(24+i*42,92,5,0,7);ctx.fillStyle='#777';ctx.fill();}});
+ for(const [y,z] of [[1.15,.45],[1.55,.5]]){const f=new THREE.Mesh(new THREE.PlaneGeometry(.55,.27),new THREE.MeshStandardMaterial({map:radioFace,roughness:.6}));f.position.set(-.6,y,z);f.rotation.y=Math.PI/2;plane.add(f);}
+ cyl(.02,.02,.25,-.7,.97,.95,rim);const shade=new THREE.Mesh(new THREE.ConeGeometry(.07,.09,10,1,true),mat('#2f3a2c'));shade.position.set(-.66,1.1,.95);shade.rotation.z=.6;plane.add(shade);
+ box(.38,.06,.36,-.4,.56,.6,cushion);box(.38,.4,.06,-.4,.78,.8,cushion);
+ // Bomb bay: shackles on each bomb and the red arming-wire tags.
+ for(const s of [-1,1])for(let r=0;r<3;r++)for(const z of [-3.3,-1.9]){box(.06,.08,.5,s*.5,.35+r*.55+.2,z,dark,bombs);box(.02,.06,.02,s*.62,.35+r*.55,z-.62,red,bombs);}
+}
+// Exterior: detailed B-17G airframe, turrets, markings and propellers (public/b17-exterior.js).
+const exterior=buildExterior({hull,NOSE,TAIL});plane.add(exterior.group);const props=exterior.props;
 const fireLight=new THREE.PointLight(0xff6325,0,8);fireLight.position.set(-.8,1.2,-3.2);plane.add(fireLight);
 for(const z of [-8.6,-6.2,-2.6,.6,4.2,6.6,9.4]){const h=hull(z);const l=new THREE.PointLight(0xffd59a,1.6,5,2);l.position.set(0,h.hi-.3,z);plane.add(l);cyl(.07,.09,.05,0,h.hi-.1,z,new THREE.MeshBasicMaterial({color:0xffdda2}));}
 // ---------- Live instruments ----------
@@ -245,7 +268,7 @@ $('#sound').onclick=()=>setSound(!sfx.on);
 // ---------- Input: pointer-lock mouse look, station keys, hold E to repair ----------
 const me=()=>g?.players?.[id],myStation=()=>me()?.station;
 const flying=()=>g&&!['briefing','debrief'].includes(g.phase)&&!g.disconnected;
-let firing=false,zoom=false,repairing=false,nextShot=0,nextRepair=0,bailHeld=0,nearestStation=null,activeHotspot=null;
+let lookTick=0,firing=false,zoom=false,repairing=false,nextShot=0,nextRepair=0,bailHeld=0,nearestStation=null,activeHotspot=null;
 const look=(dx,dy)=>{if(myStation()==='bombardier')return;const k=zoom?.4:1;yaw-=dx*.0022*k;pitch=THREE.MathUtils.clamp(pitch-dy*.0022*k,-1.5,1.5);clampAim(myStation());};
 $('#world').addEventListener('mousedown',e=>{if(!id)return;if(document.pointerLockElement!==$('#world')){$('#world').requestPointerLock?.();return;}
  if(e.button===2){zoom=true;return;}if(e.button!==0||!flying())return;const s=myStation();
@@ -268,7 +291,7 @@ addEventListener('keydown',e=>{if(['INPUT','TEXTAREA'].includes(document.activeE
 addEventListener('keyup',e=>{keys.delete(e.code);if(e.code==='KeyE')repairing=false;if(e.code==='KeyB')bailHeld=0;});
 addEventListener('blur',()=>{keys.clear();firing=false;repairing=false;send({type:'move',x:0,z:0});});
 // 10 Hz: walking, pilot/bombardier controls, held repairs.
-setInterval(()=>{const p=me();if(!p||!flying())return;
+setInterval(()=>{const p=me();if(!p||!flying())return;if(++lookTick%2===0)send({type:'look',yaw:+yaw.toFixed(3),pitch:+pitch.toFixed(3)});
  if(!p.station){const f=Number(keys.has('KeyW'))-Number(keys.has('KeyS')),side=Number(keys.has('KeyD'))-Number(keys.has('KeyA'));send({type:'move',x:-Math.sin(yaw)*f+Math.cos(yaw)*side,z:-Math.cos(yaw)*f-Math.sin(yaw)*side});
   if(repairing&&activeHotspot&&performance.now()>nextRepair){nextRepair=performance.now()+460;send({type:'repair',system:activeHotspot});}return;}
  const k=c=>Number(keys.has(c));
@@ -316,7 +339,7 @@ function frame(now){requestAnimationFrame(frame);const dt=Math.min(.1,(now-previ
  props.forEach((p,i)=>p.rotation.z+=dt*(g?.engines?(g.engines[i]>0?g.throttle*40:0):28));
  const p=me(),s=p?.station;
  if(!p){const t=now*.00004;camera.position.set(34*Math.cos(t),6,36*Math.sin(t));camera.lookAt(0,1,-1);camera.fov=50;}
- else{let fov=73;gunModel.visible=!!stations[s]?.gun;
+ else{let fov=73;gunModel.visible=!!stations[s]?.gun;for(const [k,gm] of Object.entries(waistGuns))gm.visible=s!==k;const single=s==='waistL'||s==='waistR';barrels[0].position.x=single?0:-.09;barrels[1].visible=!single;
   if(s==='bombardier'){// Norden sight: gyro-stabilised, looking at the predicted point of impact.
    const t=Math.sqrt(2*view.alt/9.81),h=g.heading*Math.PI/180,vx=Math.sin(h)*g.airspeed+g.wind.x,vy=Math.cos(h)*g.airspeed+g.wind.y,fwd=(vx*Math.sin(h)+vy*Math.cos(h))*t*KM,right=(vx*Math.cos(h)-vy*Math.sin(h))*t*KM;
    camera.position.set(0,.15,-10.95);tmp.set(right,-view.alt,-fwd);camera.lookAt(tmp.applyAxisAngle(new THREE.Vector3(0,0,1),view.bank*Math.PI/180*.7));fov=13;}
@@ -344,9 +367,14 @@ function frame(now){requestAnimationFrame(frame);const dt=Math.min(.1,(now-previ
    for(const q of Object.values(g.players))if(q.firedAt!==undefined&&q.firedAt!==heardShot.get(q.id)){if(heardShot.has(q.id)&&q.id!==id&&sfx.guns?.[q.station])gunshot(sfx.guns[q.station].bus);heardShot.set(q.id,q.firedAt);}
    updateAudio(dt);}
   // Other crew members, seated at their station when they hold one, hidden inside powered turrets.
-  for(const q of Object.values(g.players))if(q.id!==id){let a=avatars.get(q.id);if(!a){a=new THREE.Group();const jacket=mat('#5b4330',.05,.9),trousers=mat('#4a4d3b'),leather=mat('#3a2a1e',.1,.7);for(const x of [-.12,.12])cyl(.09,.08,.8,x,.4,0,trousers,a);const torso=new THREE.Mesh(new THREE.CapsuleGeometry(.24,.42,4,10),jacket);torso.position.y=1.07;a.add(torso);box(.5,.12,.3,0,1.28,0,mat('#d9d0b8',0,1),a);for(const x of [-.31,.31])cyl(.07,.06,.62,x,1.02,0,jacket,a);const head=new THREE.Mesh(new THREE.SphereGeometry(.17,12,10),mat('#c19d80'));head.position.y=1.55;a.add(head);const helmet=new THREE.Mesh(new THREE.SphereGeometry(.185,12,8,0,Math.PI*2,0,Math.PI*.55),leather);helmet.position.y=1.57;a.add(helmet);label(q.name,0,2.05,0,'#d2bd8b',.28,a);plane.add(a);avatars.set(q.id,a);}
-   a.visible=!['top','ball','chin'].includes(q.station);a.position.lerp(tmp.set(q.x,floorY(q.z),q.z),1-Math.exp(-dt*12));}
-  for(const [key,a]of avatars)if(!g.players[key]){plane.remove(a);a.traverse(o=>{o.geometry?.dispose();o.material?.dispose();});avatars.delete(key);}}
+  for(const q of Object.values(g.players))if(q.id!==id){let a=avatars.get(q.id);if(!a){a=makeCrewman([...q.id].reduce((h,c)=>h*31+c.charCodeAt(0)|0,7),q.name);a.userData.prev=new THREE.Vector3(q.x,0,q.z);plane.add(a);avatars.set(q.id,a);}
+   const st=q.station,inTurret=['top','ball','chin'].includes(st);a.visible=!inTurret;if(inTurret)continue;
+   const seatAt=st?stations[st]:null,tx=seatAt?seatAt.x:q.x,tz=seatAt?seatAt.z:q.z;a.position.x+=(tx-a.position.x)*(1-Math.exp(-dt*12));a.position.z+=(tz-a.position.z)*(1-Math.exp(-dt*12));
+   const ty=st==='pilot'?.45:st?floorY(tz):inCrawl(a.position.z)?0:floorY(a.position.z);a.position.y+=(ty-a.position.y)*(1-Math.exp(-dt*10));
+   const speed=a.position.distanceTo(a.userData.prev)/Math.max(dt,.001);a.userData.prev.copy(a.position);
+   const pose=st==='tail'?'kneel':st==='waistL'||st==='waistR'?'gunner':st?'seated':inCrawl(a.position.z)?'crouch':'walk';
+   a.userData.update(dt,{pose,speed:st?0:Math.min(speed,5),lookYaw:q.yaw??0,lookPitch:q.pitch??0});}
+  for(const [key,a]of avatars)if(!g.players[key]){plane.remove(a);disposeCrewman(a);avatars.delete(key);}}
  // Fighters: placed by bearing, elevation and range relative to the bomber; nose on during attacks.
  const seen=new Set();for(const f of (fly?g.fighters:[])){seen.add(f.id);let m=fighters.get(f.id);if(!m){m=makeFighter();m.position.copy(dirOf(f.az,f.el).multiplyScalar(f.dist));fighters.set(f.id,m);}
   m.position.lerp(dirOf(f.az,f.el).multiplyScalar(f.dist),1-Math.exp(-dt*6));m.lookAt(f.state==='approach'?tmp.set(0,0,0):tmp.copy(m.position).multiplyScalar(2).add(UP.clone().multiplyScalar(f.state==='down'?-400:0)));

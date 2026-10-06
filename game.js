@@ -48,6 +48,7 @@ export function act(g,id,a,random=Math.random){const p=g.players[id];if(!p||!a||
  if(a.type==='move'&&!p.station){p.move={x:Number.isFinite(a.x)?clamp(a.x,-1,1):0,z:Number.isFinite(a.z)?clamp(a.z,-1,1):0};p.moveUntil=g.time+.3;return true;}
  if(a.type==='station'){if(typeof a.station!=='string'||!Object.hasOwn(STATIONS,a.station))return false;const s=STATIONS[a.station];if(Math.hypot(p.x-s.x,p.z-s.z)>1.4||Object.values(g.players).some(q=>q.id!==id&&(q.station===a.station||s.seat&&STATIONS[q.station]?.seat===s.seat)))return false;p.station=a.station;p.x=s.x;p.z=s.z;return true;}
  if(a.type==='exit'){p.station=null;return true;}
+ if(a.type==='look'&&Number.isFinite(a.yaw)&&Number.isFinite(a.pitch)){p.yaw=clamp(a.yaw,-100,100);p.pitch=clamp(a.pitch,-1.6,1.6);return true;}
  if(a.type==='start'&&g.host===id&&['briefing','debrief'].includes(g.phase)){start(g,random);return true;}
  if(a.type==='call'&&typeof a.text==='string'){if(g.time<(p.callAt||0))return false;p.callAt=g.time+1.5;log(g,`${p.name}: ${a.text.slice(0,90)}`);return true;}
  if(['briefing','debrief'].includes(g.phase))return false;

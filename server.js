@@ -1,6 +1,6 @@
 import http from 'node:http';import {readFile} from 'node:fs/promises';import {randomBytes,randomUUID} from 'node:crypto';import {WebSocketServer,WebSocket} from 'ws';import {createGame,join,leave,act,tick,STATIONS,HOTSPOTS} from './game.js';
 const rooms=new Map(),clients=new Map();
-const assets={'/':['public/index.html','text/html'],'/app.js':['public/app.js','text/javascript'],'/style.css':['public/style.css','text/css'],'/map.js':['public/map.js','text/javascript'],'/three.js':['node_modules/three/build/three.module.js','text/javascript'],'/three.core.js':['node_modules/three/build/three.core.js','text/javascript']};
+const assets={'/':['public/index.html','text/html'],'/app.js':['public/app.js','text/javascript'],'/style.css':['public/style.css','text/css'],'/map.js':['public/map.js','text/javascript'],'/b17-exterior.js':['public/b17-exterior.js','text/javascript'],'/crew.js':['public/crew.js','text/javascript'],'/three.js':['node_modules/three/build/three.module.js','text/javascript'],'/three.core.js':['node_modules/three/build/three.core.js','text/javascript']};
 const server=http.createServer(async(req,res)=>{
  const path=new URL(req.url,'http://local').pathname;
  res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Referrer-Policy','no-referrer');
@@ -27,7 +27,7 @@ wss.on('connection',(ws,req)=>{
  clearTimeout(joinTimer);clients.set(ws,{code,id});send(ws,{type:'welcome',room:code,id,stations:STATIONS,hotspots:HOTSPOTS});send(ws,{type:'state',game:g});return;
  }
  const c=clients.get(ws);if(!c)return;const g=rooms.get(c.code);if(!g)return;
- if(!act(g,c.id,a)&&!['move','control','shoot','repair','mark'].includes(a.type))send(ws,{type:'notice',message:'Action unavailable. Check station, distance, or mission conditions.'});
+ if(!act(g,c.id,a)&&!['move','look','control','shoot','repair','mark'].includes(a.type))send(ws,{type:'notice',message:'Action unavailable. Check station, distance, or mission conditions.'});
  });
  ws.on('close',()=>{clearTimeout(joinTimer);const c=clients.get(ws);if(c){const g=rooms.get(c.code);if(g){leave(g,c.id);if(!Object.keys(g.players).length)rooms.delete(c.code);}clients.delete(ws);}});
  ws.on('error',()=>{});
